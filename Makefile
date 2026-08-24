@@ -6,36 +6,94 @@
 #    By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/04/11 22:23:31 by mbah              #+#    #+#              #
-#    Updated: 2026/04/19 16:13:36 by mbah             ###   ########.fr        #
+#    Updated: 2026/08/24 21:54:55 by mbah             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME = ircserv
+# Program name
+NAME		= ircserv
 
-CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I./inc
+# Compiler and flags
+CXX			= c++
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -g -MMD -MP
+CPPFLAGS	= -I./src/core/channel \
+			  -I./src/core/request \
+			  -I./src/core/responseCodes \
+			  -I./src/core/server \
+			  -I./src/core/user \
+			  -I./src/utils
 
-SRCS = main.cpp \
-	src/core/Server.cpp \
-	src/core/User.cpp \
-	src/utils/utils.cpp
+# Directories
+OBJ_DIR		= obj
 
-OBJS = $(SRCS:.cpp=.o)
+MAIN_SRC	= main.cpp
+SERVER_SRCS	= src/core/server/Server.cpp
+USER_SRCS	= src/core/user/User.cpp
+CHANNEL_SRCS= src/core/channel/Channel.cpp
+REQUEST_SRCS= src/core/request/Request.cpp
+UTILS_SRCS	= src/utils/utils.cpp
 
-all: $(NAME)
+SRCS		= $(MAIN_SRC) \
+			  $(SERVER_SRCS) \
+			  $(USER_SRCS) \
+			  $(CHANNEL_SRCS) \
+			  $(REQUEST_SRCS) \
+			  $(UTILS_SRCS)
 
+OBJS		= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
+DEPS		= $(OBJS:.o=.d)
+
+.PHONY: all clean fclean re
+
+all: $(OBJ_DIR) $(NAME)
+
+# Create object directories
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(OBJ_DIR)/src
+	@mkdir -p $(OBJ_DIR)/src/core
+	@mkdir -p $(OBJ_DIR)/src/core/channel
+	@mkdir -p $(OBJ_DIR)/src/core/request
+	@mkdir -p $(OBJ_DIR)/src/core/responseCodes
+	@mkdir -p $(OBJ_DIR)/src/core/server
+	@mkdir -p $(OBJ_DIR)/src/core/user
+	@mkdir -p $(OBJ_DIR)/src/utils
+
+# Compile source files into object files
+$(OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+# Link object files into executable
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# Include dependency files
+-include $(DEPS)
 
 clean:
-	rm -f $(OBJS)
+	@rm -rf $(OBJ_DIR)
+	@echo "Object files removed."
 
 fclean: clean
-	rm -f $(NAME)
+	@rm -f $(NAME)
+	@echo "Executable removed."
 
 re: fclean all
+	@echo "Project rebuilt successfully."
 
-.PHONY: all clean fclean re
+help:
+	@echo "Available targets:"
+	@echo "  all      - Build the program (default)"
+	@echo "  clean    - Remove object files"
+	@echo "  fclean   - Remove object files and executable"
+	@echo "  re       - Rebuild everything"
+	@echo "  help     - Display this help message"
+
+show:
+	@echo "Sources:"
+	@echo "  $(SRCS)" | tr ' ' '\n' | sed 's/^/    /'
+	@echo ""
+	@echo "Objects:"
+	@echo "  $(OBJS)" | tr ' ' '\n' | sed 's/^/    /'
+	

@@ -6,7 +6,7 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:47 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/24 22:12:58 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/26 13:24:24 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,6 +72,7 @@ class User
 		void setPasswordProvided(bool val);
 
 		void appendToBuffer(const std::string& data);
+		void appendToBuffer(const char* data);
 };
 
 bool operator==(const User & first, const User & second);

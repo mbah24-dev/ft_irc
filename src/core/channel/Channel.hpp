@@ -6,7 +6,7 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:58 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/25 12:49:17 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/26 16:30:08 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,9 +22,7 @@
 #include "../user/User.hpp"
 #include "../request/Request.hpp"
 #include "../responseCodes/ResponseCodes.hpp"
-
-#define CHANNEL_MODES "itkol"
-#define ARG_CHAN_MODES "kol"
+#include "../utils/config.hpp"
 
 enum ChannelMode
 {
@@ -44,7 +42,7 @@ class Channel
     public:
         // ======================== CONSTRUCTEURS ========================
         Channel(void);
-        Channel(const std::string& name, const std::string& password);
+        Channel(const std::string& name, const std::string& password, Server* server);
         Channel(const Channel& other);
         ~Channel(void);
         
@@ -86,8 +84,7 @@ class Channel
         bool    isModeWithParam(char mode) const;
         std::string getModeString(void) const;
         
-        bool    handleModeChange(char mode, char sign, const std::string& param,
-                                 const Request& request, const Server& server);
+		bool		handleModeChange(char mode, char sign, std::string param, Request request);
 
         static bool isValidChannelName(const std::string& name);
 
@@ -99,6 +96,12 @@ class Channel
         std::list<User*>    _members;
         std::list<User*>    _operators;
         int                 _limit;
+		Server*				_server;
+	
+	private:
+		bool				handleOperatorMode(char sign, const std::string& param, Request request);
+        bool				handleKeyMode(char sign, const std::string& param);
+        bool				handleLimitMode(char sign, const std::string& param, Request request);
 };
 
 #endif

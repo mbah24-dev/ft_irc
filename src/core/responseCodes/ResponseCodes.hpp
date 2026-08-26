@@ -6,7 +6,7 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 13:59:20 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/25 12:50:21 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/26 16:42:20 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,12 @@
 #define RPL_END_OF_NAMES 366
 
 // ======================== CODES D'ERREUR (400-500) ====================
+
+/** @brief Réponse WHO (commande WHO) */
+#define RPL_WHO_REPLY 352
+
+/** @brief Fin de la liste WHO */
+#define RPL_END_OF_WHO 315
 
 /** @brief Erreur : Utilisateur ou canal inexistant */
 #define ERR_NO_SUCH_NICK 401

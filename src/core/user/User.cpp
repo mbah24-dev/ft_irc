@@ -6,7 +6,7 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:52 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/24 22:13:04 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/26 13:23:45 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -197,6 +197,12 @@ void User::setPasswordProvided(bool val)
 void User::appendToBuffer(const std::string& data)
 {
     this->_receiveBuffer += data;
+}
+
+void User::appendToBuffer(const char* data)
+{
+    if (data)
+        this->_receiveBuffer += data;
 }
 
 bool operator==(const User & first, const User & second)

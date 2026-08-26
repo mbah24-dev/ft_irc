@@ -6,7 +6,7 @@
 #    By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/04/11 22:23:31 by mbah              #+#    #+#              #
-#    Updated: 2026/08/24 21:54:55 by mbah             ###   ########.fr        #
+#    Updated: 2026/08/26 16:37:21 by mbah             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -31,13 +31,19 @@ SERVER_SRCS	= src/core/server/Server.cpp
 USER_SRCS	= src/core/user/User.cpp
 CHANNEL_SRCS= src/core/channel/Channel.cpp
 REQUEST_SRCS= src/core/request/Request.cpp
-UTILS_SRCS	= src/utils/utils.cpp
+UTILS_SRCS	= 
+CHANNEL_MODES_SRCS = src/core/channel/ChannelModes.cpp
+SERVER_CMD_SRCS = src/core/server/ServerCommands.cpp
+SERVER_RESP_SRCS = src/core/server/ServerResponses.cpp
 
 SRCS		= $(MAIN_SRC) \
 			  $(SERVER_SRCS) \
+			  $(SERVER_CMD_SRCS) \
+			  $(SERVER_RESP_SRCS) \
 			  $(USER_SRCS) \
 			  $(CHANNEL_SRCS) \
 			  $(REQUEST_SRCS) \
+			  $(CHANNEL_MODES_SRCS) \
 			  $(UTILS_SRCS)
 
 OBJS		= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)

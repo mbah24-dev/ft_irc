@@ -6,11 +6,12 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:55 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/25 12:46:58 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/26 15:54:57 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
+#include "../server/Server.hpp"
 
 Channel::Channel(void)
     : _name(""),
@@ -23,14 +24,15 @@ Channel::Channel(void)
 {
 }
 
-Channel::Channel(const std::string& name, const std::string& password)
+Channel::Channel(const std::string& name, const std::string& password, Server* server)
     : _name(name),
       _topic(""),
       _modes(0),
       _password(password),
       _members(),
       _operators(),
-      _limit(-1)
+      _limit(-1),
+	  _server(server)
 {
 }
 
@@ -167,10 +169,35 @@ void Channel::addOperator(User* user)
         _operators.push_back(user);
 }
 
-int Channel::removeOperator(User* user)
+int Channel::removeOperator(User* operatorUser)
 {
-    _operators.remove(user);
-    return (_operators.empty());
+    //RETIRE L'OPÉRATEUR
+    _operators.remove(operatorUser);
+
+    if (_operators.empty() && !_members.empty())
+    {
+        //Le premier membre devient opérateur
+        User* newOperator = *_members.begin();
+        addOperator(newOperator);
+
+        //DIFFUSE LE CHANGEMENT
+        std::string modeMessage = ":" + std::string(SERVER_NAME)
+                                 + " MODE " + _name
+                                 + " +o " + newOperator->getNickName();
+
+        //Envoie à tous les membres du canal via le serveur
+        if (_server != NULL)
+        {
+            const std::list<User*>& members = getMembers(0);
+            for (std::list<User*>::const_iterator memberIt = members.begin();
+                 memberIt != members.end(); ++memberIt)
+            {
+                _server->sendMessage(modeMessage, (*memberIt)->getSocketFd());
+            }
+        }
+    }
+
+    return (_operators.empty() ? 1 : 0);
 }
 
 bool Channel::isOperator(User* user) const

@@ -6,7 +6,7 @@
 #    By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/04/11 22:23:31 by mbah              #+#    #+#              #
-#    Updated: 2026/08/26 16:37:21 by mbah             ###   ########.fr        #
+#    Updated: 2026/08/27 13:00:22 by mbah             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -35,11 +35,13 @@ UTILS_SRCS	=
 CHANNEL_MODES_SRCS = src/core/channel/ChannelModes.cpp
 SERVER_CMD_SRCS = src/core/server/ServerCommands.cpp
 SERVER_RESP_SRCS = src/core/server/ServerResponses.cpp
+SERVER_NICK_UTILS_SRCS = src/core/server/nickUtils.cpp
 
 SRCS		= $(MAIN_SRC) \
 			  $(SERVER_SRCS) \
 			  $(SERVER_CMD_SRCS) \
 			  $(SERVER_RESP_SRCS) \
+			  $(SERVER_NICK_UTILS_SRCS) \
 			  $(USER_SRCS) \
 			  $(CHANNEL_SRCS) \
 			  $(REQUEST_SRCS) \

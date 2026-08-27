@@ -6,7 +6,7 @@
 /*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:44 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/26 16:21:47 by mbah             ###   ########.fr       */
+/*   Updated: 2026/08/27 12:48:31 by mbah             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,11 @@ class Server
         // --- Authentification ---
         void                            handleCapCommand(const Request& req);
         void                            handlePassCommand(const Request& req);
-        void                            handleNickCommand(const Request& req);
+		
+        void                            handleNickCommand(const Request& request);
+		bool							containsForbiddenChars(const std::string& nickname) const;
+		void							checkRegistrationComplete(User* user);
+		
         void                            handleUserCommand(const Request& req);
 
         // --- Communication ---

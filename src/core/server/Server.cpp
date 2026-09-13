@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:50 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/27 13:48:52 by mbah             ###   ########.fr       */
+/*   Updated: 2026/09/13 10:31:28 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -329,7 +329,7 @@ void Server::processClientRequest(int pollIndex)
     int clientSocket = _eventPolling[pollIndex].fd;
 
     //LECTURE DES DONNÉES
-    char receiveBuffer[BUFFER_SIZE];
+    char receiveBuffer[BUFFER_SIZE + 1];
     std::memset(receiveBuffer, 0, BUFFER_SIZE);
     
     int bytesReceived = recv(clientSocket, receiveBuffer, BUFFER_SIZE, 0);
@@ -349,6 +349,8 @@ void Server::processClientRequest(int pollIndex)
         
         return;
     }
+
+    receiveBuffer[bytesReceived] = '\0';
 
     //TRAITEMENT DE LA COMMANDE
     handleCommand(receiveBuffer, clientSocket);

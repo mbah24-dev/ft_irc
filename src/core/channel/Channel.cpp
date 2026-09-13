@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:55 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/26 15:54:57 by mbah             ###   ########.fr       */
+/*   Updated: 2026/09/13 11:17:16 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,8 @@ Channel::Channel(const Channel& other)
       _password(other._password),
       _members(other._members),
       _operators(other._operators),
-      _limit(other._limit)
+    _limit(other._limit),
+    _server(other._server)
 {
 }
 
@@ -62,6 +63,7 @@ Channel& Channel::operator=(const Channel& other)
         _members = other._members;
         _operators = other._operators;
         _limit = other._limit;
+        _server = other._server;
     }
     return (*this);
 }

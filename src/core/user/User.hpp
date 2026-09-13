@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   User.hpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:47 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/26 13:24:24 by mbah             ###   ########.fr       */
+/*   Updated: 2026/09/13 11:17:15 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,6 +63,8 @@ class User
 		bool isOperator() const;
 		
 		const ChannelMap& getChannels(void) const;
+		void addChannel(const std::string& name, Channel* channel);
+		void removeChannel(const std::string& name);
 		
 		void setName(const std::string& name);
 		void setNickName(const std::string& nickname);

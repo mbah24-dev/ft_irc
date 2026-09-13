@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   User.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:52 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/26 13:23:45 by mbah             ###   ########.fr       */
+/*   Updated: 2026/09/13 11:17:15 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -159,6 +159,17 @@ bool User::isOperator(void) const
 const User::ChannelMap& User::getChannels(void) const
 {
     return (this->_channelMap);
+}
+
+void User::addChannel(const std::string& name, Channel* channel)
+{
+    if (channel != NULL)
+        _channelMap[name] = channel;
+}
+
+void User::removeChannel(const std::string& name)
+{
+    _channelMap.erase(name);
 }
 
 void User::setName(const std::string& name)

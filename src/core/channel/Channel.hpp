@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:58 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/26 16:30:08 by mbah             ###   ########.fr       */
+/*   Updated: 2026/09/29 10:17:54 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,6 +59,9 @@ class Channel
         std::list<User*>&       getMembers(int);
         const std::list<User*>& getOperators(void) const;
         std::list<User*>&       getOperators(int);
+        bool                    isInvited(const std::string& nickname) const;
+        void                    addInvitation(const std::string& nickname);
+        void                    removeInvitation(const std::string& nickname);
 
         // ======================== SETTERS ========================
         void setTopic(const std::string& topic);
@@ -95,6 +98,7 @@ class Channel
         std::string         _password;
         std::list<User*>    _members;
         std::list<User*>    _operators;
+        std::vector<std::string> _invitedNicknames;
         int                 _limit;
 		Server*				_server;
 	

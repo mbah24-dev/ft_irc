@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:55 by mbah              #+#    #+#             */
-/*   Updated: 2026/09/13 11:17:16 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/09/29 10:39:04 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@ Channel::Channel(void)
       _password(""),
       _members(),
       _operators(),
+    _invitedNicknames(),
       _limit(-1)
 {
 }
@@ -31,6 +32,7 @@ Channel::Channel(const std::string& name, const std::string& password, Server* s
       _password(password),
       _members(),
       _operators(),
+    _invitedNicknames(),
       _limit(-1),
 	  _server(server)
 {
@@ -43,6 +45,7 @@ Channel::Channel(const Channel& other)
       _password(other._password),
       _members(other._members),
       _operators(other._operators),
+            _invitedNicknames(other._invitedNicknames),
     _limit(other._limit),
     _server(other._server)
 {
@@ -62,6 +65,7 @@ Channel& Channel::operator=(const Channel& other)
         _password = other._password;
         _members = other._members;
         _operators = other._operators;
+        _invitedNicknames = other._invitedNicknames;
         _limit = other._limit;
         _server = other._server;
     }
@@ -113,6 +117,25 @@ const std::list<User*>& Channel::getOperators(void) const
 std::list<User*>& Channel::getOperators(int)
 {
     return (_operators);
+}
+
+bool Channel::isInvited(const std::string& nickname) const
+{
+    return (std::find(_invitedNicknames.begin(), _invitedNicknames.end(),
+                      nickname) != _invitedNicknames.end());
+}
+
+void Channel::addInvitation(const std::string& nickname)
+{
+    if (!isInvited(nickname))
+        _invitedNicknames.push_back(nickname);
+}
+
+void Channel::removeInvitation(const std::string& nickname)
+{
+    _invitedNicknames.erase(
+        std::remove(_invitedNicknames.begin(), _invitedNicknames.end(), nickname),
+        _invitedNicknames.end());
 }
 
 void Channel::setTopic(const std::string& topic)

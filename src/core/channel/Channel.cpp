@@ -6,12 +6,24 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:55 by mbah              #+#    #+#             */
-/*   Updated: 2026/09/29 10:39:04 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/01 10:54:36 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
 #include "../server/Server.hpp"
+#include <cctype>
+
+static bool channelNamesEqual(const std::string& left, const std::string& right)
+{
+    if (left.length() != right.length())
+        return (false);
+    for (std::string::size_type i = 0; i < left.length(); ++i)
+        if (std::tolower(static_cast<unsigned char>(left[i])) !=
+            std::tolower(static_cast<unsigned char>(right[i])))
+            return (false);
+    return (true);
+}
 
 Channel::Channel(void)
     : _name(""),
@@ -121,8 +133,11 @@ std::list<User*>& Channel::getOperators(int)
 
 bool Channel::isInvited(const std::string& nickname) const
 {
-    return (std::find(_invitedNicknames.begin(), _invitedNicknames.end(),
-                      nickname) != _invitedNicknames.end());
+    for (std::vector<std::string>::const_iterator it = _invitedNicknames.begin();
+         it != _invitedNicknames.end(); ++it)
+        if (channelNamesEqual(*it, nickname))
+            return (true);
+    return (false);
 }
 
 void Channel::addInvitation(const std::string& nickname)
@@ -133,9 +148,14 @@ void Channel::addInvitation(const std::string& nickname)
 
 void Channel::removeInvitation(const std::string& nickname)
 {
-    _invitedNicknames.erase(
-        std::remove(_invitedNicknames.begin(), _invitedNicknames.end(), nickname),
-        _invitedNicknames.end());
+    for (std::vector<std::string>::iterator it = _invitedNicknames.begin();
+         it != _invitedNicknames.end(); )
+    {
+        if (channelNamesEqual(*it, nickname))
+            it = _invitedNicknames.erase(it);
+        else
+            ++it;
+    }
 }
 
 void Channel::setTopic(const std::string& topic)
@@ -182,7 +202,7 @@ User* Channel::findMember(const std::string& nickname)
     
     for (it = _members.begin(); it != _members.end(); ++it)
     {
-        if ((*it)->getNickName() == nickname)
+        if (channelNamesEqual((*it)->getNickName(), nickname))
             return (*it);
     }
     return (NULL);

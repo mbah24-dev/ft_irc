@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:52 by mbah              #+#    #+#             */
-/*   Updated: 2026/09/13 11:17:15 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/01 10:56:04 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 
 User::User(void)
     : _receiveBuffer(""),
+    _sendBuffer(""),
       _socketFd(-1),
       _registered(false),
       _password_provided(false),
@@ -27,6 +28,7 @@ User::User(void)
 
 User::User(const User & source)
     : _receiveBuffer(source._receiveBuffer),
+    _sendBuffer(source._sendBuffer),
       _socketFd(source._socketFd),
       _registered(source._registered),
       _password_provided(source._password_provided),
@@ -50,6 +52,7 @@ User::User(const User & source)
 
 User::User(int socketFd, const std::string& hostMask)
     : _receiveBuffer(""),
+    _sendBuffer(""),
       _socketFd(socketFd),
       _registered(false),
       _password_provided(false),
@@ -74,6 +77,7 @@ User& User::operator=(const User& source)
     {
         //Copie des attributs simples
         this->_receiveBuffer = source._receiveBuffer;
+        this->_sendBuffer = source._sendBuffer;
         this->_socketFd = source._socketFd;
         this->_registered = source._registered;
         this->_password_provided = source._password_provided;
@@ -214,6 +218,11 @@ void User::appendToBuffer(const char* data)
 {
     if (data)
         this->_receiveBuffer += data;
+}
+
+void User::appendToSendBuffer(const std::string& data)
+{
+    this->_sendBuffer += data;
 }
 
 bool operator==(const User & first, const User & second)

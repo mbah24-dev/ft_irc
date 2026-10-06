@@ -22,7 +22,7 @@
 #include "../user/User.hpp"
 #include "../request/Request.hpp"
 #include "../responseCodes/ResponseCodes.hpp"
-#include "../utils/config.hpp"
+#include "../../utils/config.hpp"
 
 enum ChannelMode
 {

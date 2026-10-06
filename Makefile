@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+         #
+#    By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/04/11 22:23:31 by mbah              #+#    #+#              #
-#    Updated: 2026/08/27 13:00:22 by mbah             ###   ########.fr        #
+#    Updated: 2026/10/06 12:18:40 by zcherif          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -33,7 +33,9 @@ CHANNEL_SRCS= src/core/channel/Channel.cpp
 REQUEST_SRCS= src/core/request/Request.cpp
 UTILS_SRCS	= 
 CHANNEL_MODES_SRCS = src/core/channel/ChannelModes.cpp
-SERVER_CMD_SRCS = src/core/server/ServerCommands.cpp
+SERVER_CMD_SRCS = src/core/server/ServerUserCommands.cpp \
+			  src/core/server/ServerChannelCommands.cpp \
+			  src/core/server/ServerAdminCommands.cpp
 SERVER_RESP_SRCS = src/core/server/ServerResponses.cpp
 SERVER_NICK_UTILS_SRCS = src/core/server/nickUtils.cpp
 

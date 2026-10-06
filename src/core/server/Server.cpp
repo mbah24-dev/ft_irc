@@ -6,11 +6,23 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:50 by mbah              #+#    #+#             */
-/*   Updated: 2026/09/13 10:31:28 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/01 11:38:42 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include <cctype>
+
+static bool sameIgnoringCase(const std::string& left, const std::string& right)
+{
+    if (left.length() != right.length())
+        return (false);
+    for (std::string::size_type i = 0; i < left.length(); ++i)
+        if (std::tolower(static_cast<unsigned char>(left[i])) !=
+            std::tolower(static_cast<unsigned char>(right[i])))
+            return (false);
+    return (true);
+}
 
 Server::Server(char** arguments)
 {
@@ -93,7 +105,16 @@ void Server::disconnectClient(User* user, const std::string& message)
     if (user == NULL)
         return;
 
-    int clientSocket = user->getSocketFd();
+    const int clientSocket = user->getSocketFd();
+    removeClientFromChannels(user, message);
+    removeClientFromPolling(clientSocket);
+    _connectedClients.erase(clientSocket);
+    std::cout << "Client (fd [" << clientSocket << "]) disconnected: "
+              << message << std::endl;
+}
+
+void Server::removeClientFromChannels(User* user, const std::string& message)
+{
     std::list<std::string> emptyChannels;
 
     //RETIRE L'UTILISATEUR DE TOUS LES CANAUX
@@ -108,13 +129,8 @@ void Server::disconnectClient(User* user, const std::string& message)
             if (currentChannel.removeMember(user))
                 emptyChannels.push_back(currentChannel.getName());
 
-            //Envoie le message QUIT à tous les membres du canal
-            const std::list<User*>& channelMembers = currentChannel.getMembers(0);
-            for (std::list<User*>::const_iterator memberIt = channelMembers.begin();
-                 memberIt != channelMembers.end(); ++memberIt)
-            {
-                sendMessage(user->getPrefix() + " QUIT :" + message, (*memberIt)->getSocketFd());
-            }
+            const std::string quitMessage = user->getPrefix() + " QUIT :" + message;
+            broadcast(quitMessage, NULL, currentChannel);
         }
         ++channelIt;
     }
@@ -126,7 +142,10 @@ void Server::disconnectClient(User* user, const std::string& message)
         _activeChannels.erase(*emptyIt);
     }
 
-    //RETIRE DU TABLEAU POLL()
+}
+
+void Server::removeClientFromPolling(int clientSocket)
+{
     for (unsigned int index = 0; index < _activeDescriptors; ++index)
     {
         if (_eventPolling[index].fd == clientSocket)
@@ -135,15 +154,11 @@ void Server::disconnectClient(User* user, const std::string& message)
             break;
         }
     }
-
-    //SUPPRIME DE LA MAP DES CLIENTS
-    _connectedClients.erase(clientSocket);
-
-    std::cout << "Client (fd [" << clientSocket << "]) disconnected: " << message << std::endl;
 }
 
 void Server::startEventLoop(void)
 {
+    std::signal(SIGPIPE, SIG_IGN);
     initializeServerSocket();
 
     while (1)
@@ -160,22 +175,26 @@ void Server::startEventLoop(void)
         {
             try
             {
-                //ÉVÉNEMENT POLLIN: DONNÉES ENTRANTES
-                if (_eventPolling[index].revents & POLLIN)
+                const int readyFd = _eventPolling[index].fd;
+                const short readyEvents = _eventPolling[index].revents;
+                if (readyFd == _serverSocket)
                 {
-                    if (_eventPolling[index].fd == _serverSocket)
-                        acceptNewClient();          //Nouvelle connexion
-                    else
-                        processClientRequest(index); //Message d'un client
+                    if (readyEvents & POLLIN)
+                        acceptNewClient();
                 }
-                
-                //ÉVÉNEMENT POLLHUP: DÉCONNEXION
-                else if (_eventPolling[index].revents & (POLLHUP | POLLERR))
+                else
                 {
-                    //Récupére l'utilisateur associé à ce FD
-                    ClientRegistry::iterator clientIt = _connectedClients.find(_eventPolling[index].fd);
-                    if (clientIt != _connectedClients.end())
-                        disconnectClient(&clientIt->second, "connection lost");
+                    if (readyEvents & POLLIN)
+                        processClientRequest(index);
+                    if (_connectedClients.find(readyFd) != _connectedClients.end() &&
+                        (readyEvents & POLLOUT))
+                        flushClientOutput(readyFd);
+                    if (readyEvents & (POLLHUP | POLLERR | POLLNVAL))
+                    {
+                        ClientRegistry::iterator clientIt = _connectedClients.find(readyFd);
+                        if (clientIt != _connectedClients.end())
+                            disconnectClient(&clientIt->second, "connection lost");
+                    }
                 }
             }
             catch (const std::exception& error)
@@ -200,6 +219,12 @@ void Server::acceptNewClient(void)
     
     if (clientSocket == -1)
         throw AcceptSocketError();
+
+    if (fcntl(clientSocket, F_SETFL, O_NONBLOCK) == -1)
+    {
+        close(clientSocket);
+        throw SetSocketOptionError();
+    }
 
     //RÉCUPÉRATION DE L'ADRESSE IP
     char ipAddress[INET_ADDRSTRLEN];
@@ -257,70 +282,61 @@ void Server::executeCommand(const Request& req)
 {
     const std::string& command = req.getCommand();
     User* client = req.getUser();
-    int clientSocket = client->getSocketFd();
+    if (executeAuthCommand(req) || executeMessageCommand(req) ||
+        executeChannelCommand(req) || executeAdminCommand(req))
+        return;
+    sendMessage(std::string(SERVER_NAME) + " 421 " + client->getNickName() +
+                " " + command + " :Unknown command", client->getSocketFd());
+}
 
-    //COMMANDES D'AUTH
-    if (command == "CAP")
-        handleCapCommand(req);
-    else if (command == "PASS")
-        handlePassCommand(req);
-    else if (command == "NICK")
-        handleNickCommand(req);
-    else if (command == "USER")
-        handleUserCommand(req);
+bool Server::executeAuthCommand(const Request& req)
+{
+    const std::string& command = req.getCommand();
+    if (command == "CAP") handleCapCommand(req);
+    else if (command == "PASS") handlePassCommand(req);
+    else if (command == "NICK") handleNickCommand(req);
+    else if (command == "USER") handleUserCommand(req);
+    else return (false);
+    return (true);
+}
 
-    //COMMANDES DE COMMUNICATION
-    else if (command == "PING")
-        handlePingCommand(req);
-    else if (command == "PONG")
-        handlePongCommand(req);
-    else if (command == "PRIVMSG")
-        handlePrivmsgCommand(req);
-    else if (command == "NOTICE")
-        handleNoticeCommand(req);
+bool Server::executeMessageCommand(const Request& req)
+{
+    const std::string& command = req.getCommand();
+    if (command == "PING") handlePingCommand(req);
+    else if (command == "PONG") handlePongCommand(req);
+    else if (command == "PRIVMSG") handlePrivmsgCommand(req);
+    else if (command == "NOTICE") handleNoticeCommand(req);
+    else return (false);
+    return (true);
+}
 
-    //COMMANDES DE CANAUX 
-    else if (command == "JOIN")
-        handleJoinCommand(req);
-    else if (command == "PART")
-        handlePartCommand(req);
-    else if (command == "TOPIC")
-        handleTopicCommand(req);
-    else if (command == "LIST")
-        handleListCommand(req);
-    else if (command == "NAMES")
-        handleNamesCommand(req);
-    else if (command == "WHO")
-        handleWhoCommand(req);
-    else if (command == "INVITE")
-        handleInviteCommand(req);
-    else if (command == "KICK")
-        handleKickCommand(req);
-    else if (command == "MODE")
-        handleModeCommand(req);
+bool Server::executeChannelCommand(const Request& req)
+{
+    const std::string& command = req.getCommand();
+    if (command == "JOIN") handleJoinCommand(req);
+    else if (command == "PART") handlePartCommand(req);
+    else if (command == "TOPIC") handleTopicCommand(req);
+    else if (command == "LIST") handleListCommand(req);
+    else if (command == "NAMES") handleNamesCommand(req);
+    else if (command == "WHO") handleWhoCommand(req);
+    else if (command == "INVITE") handleInviteCommand(req);
+    else if (command == "KICK") handleKickCommand(req);
+    else if (command == "MODE") handleModeCommand(req);
+    else return (false);
+    return (true);
+}
 
-    //COMMANDES D'OPÉRATEUR
-    else if (command == "OPER")
-        handleOperCommand(req);
-    else if (command == "KILL")
-        handleKillCommand(req);
-
-    //COMMANDES SPÉCIALES / BOT
-    else if (command == "GLOBOPS")
-        handleGlobopsCommand(req);
-    else if (command == "SHOWTIME")
-        handleShowtimeCommand(req);
-
-    //COMMANDE DE DÉCONNEXION
-    else if (command == "QUIT")
-        handleQuitCommand(req);
-
-    //COMMANDE INCONNUE
-    else
-    {
-        std::string errorMessage = std::string(SERVER_NAME) + " 421 " + client->getNickName() + " " + command + " :Unknown command";
-        sendMessage(errorMessage, clientSocket);
-    }
+bool Server::executeAdminCommand(const Request& req)
+{
+    const std::string& command = req.getCommand();
+    if (command == "OPER") handleOperCommand(req);
+    else if (command == "KILL") handleKillCommand(req);
+    else if (command == "GLOBOPS") handleGlobopsCommand(req);
+    else if (command == "SHOWTIME") handleShowtimeCommand(req);
+    else if (command == "QUIT") handleQuitCommand(req);
+    else return (false);
+    return (true);
 }
 
 void Server::processClientRequest(int pollIndex)
@@ -329,16 +345,17 @@ void Server::processClientRequest(int pollIndex)
     int clientSocket = _eventPolling[pollIndex].fd;
 
     //LECTURE DES DONNÉES
-    char receiveBuffer[BUFFER_SIZE + 1];
-    std::memset(receiveBuffer, 0, BUFFER_SIZE);
+    char receiveBuffer[BUFFER_SIZE];
     
-    int bytesReceived = recv(clientSocket, receiveBuffer, BUFFER_SIZE, 0);
+    ssize_t bytesReceived = recv(clientSocket, receiveBuffer, BUFFER_SIZE, 0);
 
     //GESTION DE LA DÉCONNEXION
     if (bytesReceived <= 0)
     {
         if (bytesReceived == 0)
             std::cout << "Client (fd [" << clientSocket << "]) disconnected" << std::endl;
+        else if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+            return;
         else
             throw ReceiveMessageFailed();
         
@@ -350,13 +367,12 @@ void Server::processClientRequest(int pollIndex)
         return;
     }
 
-    receiveBuffer[bytesReceived] = '\0';
-
     //TRAITEMENT DE LA COMMANDE
-    handleCommand(receiveBuffer, clientSocket);
+    handleCommand(std::string(receiveBuffer, static_cast<std::size_t>(bytesReceived)),
+                  clientSocket);
 }
 
-void Server::handleCommand(char* rawData, int clientSocket)
+void Server::handleCommand(const std::string& rawData, int clientSocket)
 {
     //RÉCUPÉRATION DE L'UTILISATEUR
     ClientRegistry::iterator clientIt = _connectedClients.find(clientSocket);
@@ -369,15 +385,21 @@ void Server::handleCommand(char* rawData, int clientSocket)
     currentUser->appendToBuffer(rawData);
 
     //EXTRACTION DES COMMANDES 
-    const std::string commandSeparator = "\r\n";
-    size_t separatorPosition = currentUser->_receiveBuffer.find(commandSeparator);
+    size_t separatorPosition = currentUser->_receiveBuffer.find('\n');
     
-    while (separatorPosition != std::string::npos &&
-           separatorPosition < BUFFER_SIZE)
+    while (separatorPosition != std::string::npos)
     {
         //Extraire une commande complète
         std::string commandLine = currentUser->_receiveBuffer.substr(0, separatorPosition);
-        currentUser->_receiveBuffer.erase(0, separatorPosition + 2);  // +2 pour \r\n
+        if (!commandLine.empty() && commandLine[commandLine.length() - 1] == '\r')
+            commandLine.erase(commandLine.length() - 1);
+        currentUser->_receiveBuffer.erase(0, separatorPosition + 1);
+
+        if (commandLine.find_first_not_of(' ') == std::string::npos)
+        {
+            separatorPosition = currentUser->_receiveBuffer.find('\n');
+            continue;
+        }
 
         //Crée et exécute la requête
         Request clientRequest(commandLine, currentUser);
@@ -389,8 +411,8 @@ void Server::handleCommand(char* rawData, int clientSocket)
         if (_connectedClients.find(clientSocket) == _connectedClients.end())
             break;
 
-        //Cherche la prochaine commande
-        separatorPosition = currentUser->_receiveBuffer.find(commandSeparator);
+        //Cherche la prochaine commande, que le client utilise LF ou CRLF
+        separatorPosition = currentUser->_receiveBuffer.find('\n');
     }
 }
 
@@ -416,7 +438,7 @@ Server::ClientRegistry::iterator Server::findUserByNickname(const std::string& n
     
     while (clientIt != _connectedClients.end())
     {
-        if (clientIt->second.getNickName() == nickname)
+        if (sameIgnoringCase(clientIt->second.getNickName(), nickname))
             return (clientIt);
         
         ++clientIt;
@@ -427,15 +449,76 @@ Server::ClientRegistry::iterator Server::findUserByNickname(const std::string& n
 
 void Server::sendMessage(const std::string& message, int clientSocket)
 {
-    std::cout << "SENDING: <" << message << ">" << std::endl;
-
     std::string formattedMessage = message;
+    const std::string serverName(SERVER_NAME);
+    if (formattedMessage.compare(0, serverName.length(), serverName) == 0 &&
+        formattedMessage.length() > serverName.length() &&
+        formattedMessage[serverName.length()] == ' ')
+        formattedMessage.insert(0, ":");
+
+    const std::string serverPrefix = ":" + serverName;
+    if (formattedMessage.compare(0, serverPrefix.length(), serverPrefix) == 0)
+    {
+        std::string codeStart = formattedMessage.substr(serverPrefix.length());
+        std::string::size_type codeSpace = codeStart.find(' ');
+        if (codeSpace != std::string::npos && codeSpace + 4 < codeStart.length() &&
+            codeStart[codeSpace + 1] >= '0' && codeStart[codeSpace + 1] <= '9' &&
+            codeStart[codeSpace + 2] >= '0' && codeStart[codeSpace + 2] <= '9' &&
+            codeStart[codeSpace + 3] >= '0' && codeStart[codeSpace + 3] <= '9' &&
+            codeStart[codeSpace + 4] == ' ' && codeSpace + 5 < codeStart.length() &&
+            codeStart[codeSpace + 5] == ' ')
+            formattedMessage.insert(serverPrefix.length() + codeSpace + 5, "*");
+    }
     formattedMessage += IRC_END_SEQUENCE;
 
-    ssize_t bytesSent = send(clientSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
-    
-    if (bytesSent == -1)
-        std::cerr << "Failed to send message to fd " << clientSocket << std::endl;
+    ClientRegistry::iterator clientIt = _connectedClients.find(clientSocket);
+    if (clientIt == _connectedClients.end())
+        return;
+    clientIt->second.appendToSendBuffer(formattedMessage);
+    flushClientOutput(clientSocket);
+}
+
+void Server::sendChannelError(User* client, int code,
+                              const std::string& channelName,
+                              const std::string& message)
+{
+    sendMessage(std::string(SERVER_NAME) + " " + intToString(code) + " " +
+                client->getNickName() + " " + channelName + " :" + message,
+                client->getSocketFd());
+}
+
+void Server::flushClientOutput(int clientSocket)
+{
+    ClientRegistry::iterator clientIt = _connectedClients.find(clientSocket);
+    if (clientIt == _connectedClients.end())
+        return;
+
+    std::string& pending = clientIt->second._sendBuffer;
+    while (!pending.empty())
+    {
+        ssize_t bytesSent = send(clientSocket, pending.data(), pending.size(), MSG_NOSIGNAL);
+        if (bytesSent > 0)
+        {
+            pending.erase(0, static_cast<std::string::size_type>(bytesSent));
+            continue;
+        }
+        if (bytesSent == -1 && errno == EINTR)
+            continue;
+        if (bytesSent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            break;
+        break;
+    }
+
+    const short events = static_cast<short>(POLLIN |
+        (pending.empty() ? 0 : POLLOUT));
+    for (unsigned int i = 0; i < _activeDescriptors; ++i)
+    {
+        if (_eventPolling[i].fd == clientSocket)
+        {
+            _eventPolling[i].events = events;
+            break;
+        }
+    }
 }
 
 Channel* Server::findChannel(const std::string& channelName)
@@ -444,7 +527,7 @@ Channel* Server::findChannel(const std::string& channelName)
     
     while (channelIt != _activeChannels.end())
     {
-        if (channelIt->second.getName() == channelName)
+        if (sameIgnoringCase(channelIt->second.getName(), channelName))
             return (&channelIt->second);
         
         ++channelIt;

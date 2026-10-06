@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   nickUtils.cpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/27 12:09:52 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/27 12:59:10 by mbah             ###   ########.fr       */
+/*   Updated: 2026/10/01 10:54:35 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,15 +17,16 @@
  */
 bool Server::containsForbiddenChars(const std::string& nickname) const
 {
-    const std::string forbiddenChars = "!@#$%^&*()+={}[];,:\"\t'<>.";
-    std::string::size_type index = 0;
-
-    while (index < forbiddenChars.length())
-    {
-        if (nickname.find(forbiddenChars[index]) != std::string::npos)
+    if (nickname.empty() || nickname.length() > 9)
+        return (true);
+    const std::string firstChars =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]\\`_^{}|";
+    const std::string otherChars = firstChars + "0123456789-";
+    if (firstChars.find(nickname[0]) == std::string::npos)
+        return (true);
+    for (std::string::size_type i = 1; i < nickname.length(); ++i)
+        if (otherChars.find(nickname[i]) == std::string::npos)
             return (true);
-        ++index;
-    }
     return (false);
 }
 

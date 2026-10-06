@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:47 by mbah              #+#    #+#             */
-/*   Updated: 2026/09/13 11:17:15 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/01 10:56:04 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ class User
 {
 	public:
 		std::string	_receiveBuffer;
+		std::string	_sendBuffer;
 
 	private:
 		int			_socketFd;
@@ -75,6 +76,7 @@ class User
 
 		void appendToBuffer(const std::string& data);
 		void appendToBuffer(const char* data);
+		void appendToSendBuffer(const std::string& data);
 };
 
 bool operator==(const User & first, const User & second);

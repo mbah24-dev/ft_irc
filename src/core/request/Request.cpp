@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Request.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 17:55:06 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/24 22:13:18 by mbah             ###   ########.fr       */
+/*   Updated: 2026/10/01 10:54:35 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Request.hpp"
+#include <cctype>
 
 Request::Request(void)
     : _command(""),
@@ -116,6 +117,9 @@ void Request::cmdLineparser(const std::string& input)
         return;
     
     _extractCommand(line);
+    for (std::string::size_type i = 0; i < _command.size(); ++i)
+        _command[i] = static_cast<char>(std::toupper(
+            static_cast<unsigned char>(_command[i])));
     
     if (_hasParameters(line))
         _extractParameters(line);
@@ -165,12 +169,12 @@ bool Request::_hasParameters(const std::string& line) const
  */
 void Request::_extractCommand(const std::string& line)
 {
-    std::string::size_type pos = line.find(' ');
-    
-    if (pos == std::string::npos)
-        this->_command = line;
-    else
-        this->_command = line.substr(0, pos);
+    std::string::size_type start = line.find_first_not_of(' ');
+    if (start == std::string::npos)
+        return;
+    std::string::size_type end = line.find(' ', start);
+    this->_command = line.substr(start, end == std::string::npos
+        ? std::string::npos : end - start);
 }
 
 /**

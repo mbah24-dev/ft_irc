@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbah <mbah@student.42lyon.fr>              +#+  +:+       +#+        */
+/*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:44 by mbah              #+#    #+#             */
-/*   Updated: 2026/08/27 12:48:31 by mbah             ###   ########.fr       */
+/*   Updated: 2026/10/06 12:24:16 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,11 +30,12 @@
 # include <unistd.h>
 # include <vector>
 # include <ctime>
+#include <climits>
 
 # include "User.hpp"
 # include "Channel.hpp"
 # include "Request.hpp"
-# include "../utils/config.hpp"
+# include "../../utils/config.hpp"
 
 /**
  * @class Server
@@ -63,11 +64,16 @@ class Server
     public:
         void                            startEventLoop(void);
         void                            sendMessage(const std::string& message, int clientSocket);
+        void                            sendChannelError(User* client, int code,
+                                  const std::string& channelName,
+                                  const std::string& message);
         
         ClientRegistry::iterator        findUserByNickname(const std::string& nickname);
         Channel*                        findChannel(const std::string& channelName);
 
         void                            disconnectClient(User* user, const std::string& message);
+        void							removeClientFromChannels(User* user, const std::string& message);
+        void							removeClientFromPolling(int clientSocket);
 		void							broadcast(const std::string& message, User* sender, Channel& channel);
 		void							sendFormattedResponse(const Request& clientRequest, int responseCode);
 
@@ -78,13 +84,21 @@ class Server
         
         void                            acceptNewClient(void);
         void                            processClientRequest(int pollIndex);
-        void                            handleCommand(char* rawData, int clientSocket);
+        void                            handleCommand(const std::string& rawData, int clientSocket);
+        void                            flushClientOutput(int clientSocket);
         
         void                            addToPolling(int clientSocket);
         void                            removeFromPolling(int index);
 
         void                            executeCommand(const Request& req);
+        bool							 executeAuthCommand(const Request& req);
+        bool							 executeMessageCommand(const Request& req);
+        bool							 executeChannelCommand(const Request& req);
+        bool							 executeAdminCommand(const Request& req);
 		std::string						buildResponseMessage(const Request& clientRequest, int responseCode);
+        std::string						buildModeResponse(const Request& req, int code) const;
+        std::string						buildChannelResponse(const Request& req, int code) const;
+        std::string						buildUserResponse(const Request& req, int code) const;
 		std::string						intToString(int number) const;
 
     // ======================== COMMANDES IRC ========================
@@ -94,6 +108,7 @@ class Server
         void                            handlePassCommand(const Request& req);
 		
         void                            handleNickCommand(const Request& request);
+        bool                            validateNickCommand(const Request& request);
 		bool							containsForbiddenChars(const std::string& nickname) const;
 		void							checkRegistrationComplete(User* user);
 		
@@ -104,17 +119,60 @@ class Server
         void                            handlePongCommand(const Request& req);
         void                            handlePrivmsgCommand(const Request& req);
         void                            handleNoticeCommand(const Request& req);
+        void                            deliverMessage(User* sender, const std::string& target,
+                                const std::string& text,
+                                const std::string& command,
+                                bool reportErrors);
 
         // --- Canaux ---
         void                            handleJoinCommand(const Request& req);
+        void                            joinChannel(User* client, const std::string& channelName,
+                                const std::string& key);
+        bool                            validateChannelJoin(User* client, Channel* channel,
+                                    const std::string& key);
+        void                            sendChannelNames(User* client, const Channel* channel);
         void                            handlePartCommand(const Request& req);
+        void                            removeUserFromChannel(Channel* channel, User* user);
         void                            handleTopicCommand(const Request& req);
+        void                            sendChannelTopic(User* client, const Channel* channel);
+        void                            updateChannelTopic(User* client, Channel* channel,
+                                   const std::string& topic);
         void                            handleListCommand(const Request& req);
+        void                            sendChannelListEntry(User* client, const Channel& channel);
         void                            handleNamesCommand(const Request& req);
         void                            handleWhoCommand(const Request& req);
+        void                            sendWhoForAll(User* requester, bool operatorsOnly);
+        void                            sendWhoReply(User* requester, const std::string& channelName,
+                                 User* subject, const Channel* channel);
         void                            handleInviteCommand(const Request& req);
+        void                            processInvite(User* inviter, const std::string& nickname,
+                                  const std::string& channelName);
         void                            handleKickCommand(const Request& req);
+        void                            processKick(User* kicker, const std::string& channelName,
+                                const std::string& nickname,
+                                const std::string& reason);
         void                            handleModeCommand(const Request& req);
+        bool                            prepareModeCommand(const Request& req, Channel*& channel);
+        bool                            validateModeArguments(User* client, Channel* channel,
+                                      const std::string& channelName,
+                                      const std::string& modes,
+                                      const std::vector<std::string>& params);
+        bool                            validateModeParameter(User* client, Channel* channel,
+                                      const std::string& channelName,
+                                      char mode, const std::string& value);
+        bool                            applyChannelMode(Channel* channel, char mode,
+                                 char sign, const std::string& value);
+        bool                            applyOperatorMode(Channel* channel, char sign,
+                                  const std::string& nickname);
+        bool                            applyKeyMode(Channel* channel, char sign,
+                                 const std::string& key);
+        bool                            applyLimitMode(Channel* channel, char sign,
+                                   const std::string& value);
+        void                            applyModeChanges(Channel* channel,
+                                 const std::string& modes,
+                                 const std::vector<std::string>& params,
+                                 std::string& changedModes,
+                                 std::string& changedParams);
 
         // --- Opérateur ---
         void                            handleOperCommand(const Request& req);

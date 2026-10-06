@@ -75,6 +75,33 @@ JOIN #42
 PRIVMSG #42 :Hello!
 ```
 
+## Commandes disponibles
+
+```text
+PASS <mot_de_passe>
+NICK <pseudo>
+USER <utilisateur> <mode> <serveur> :<nom_complet>
+CAP LS | REQ <capacites> | END
+PING <jeton>
+PONG <jeton>
+PRIVMSG <pseudo|#canal> :<message>
+NOTICE <pseudo|#canal> :<message>
+JOIN <#canal>
+PART <#canal> :[raison]
+TOPIC <#canal> [:<nouveau_sujet>]
+LIST [#canal]
+NAMES [#canal]
+WHO [pseudo|#canal|*] [o]
+INVITE <pseudo> <#canal>
+KICK <#canal> <pseudo> :[raison]
+MODE <#canal> [modes [parametres]] (-itklo)
+OPER <utilisateur> <mot_de_passe_serveur>
+KILL <pseudo> :[raison]
+GLOBOPS :<message>
+SHOWTIME
+QUIT :[raison]
+```
+
 ### Running the tests
 
 First start the server with the port and password you intend to use for testing. In another terminal, run:

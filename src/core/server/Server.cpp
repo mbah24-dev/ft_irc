@@ -6,12 +6,19 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:50 by mbah              #+#    #+#             */
-/*   Updated: 2026/10/01 11:38:42 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 13:50:46 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 #include <cctype>
+
+static volatile sig_atomic_t g_shutdownRequested = 0;
+
+static void requestServerShutdown(int)
+{
+    g_shutdownRequested = 1;
+}
 
 static bool sameIgnoringCase(const std::string& left, const std::string& right)
 {
@@ -25,6 +32,9 @@ static bool sameIgnoringCase(const std::string& left, const std::string& right)
 }
 
 Server::Server(char** arguments)
+        : _listeningPort(0),
+            _serverSocket(-1),
+            _activeDescriptors(0)
 {
     char*   endPointer;
     long    portNumber = std::strtol(arguments[1], &endPointer, 0);
@@ -51,7 +61,19 @@ Server::Server(char** arguments)
 
 Server::~Server(void)
 {
-    // TODO: Nettoie les ressources
+    for (ClientRegistry::iterator it = _connectedClients.begin();
+         it != _connectedClients.end(); ++it)
+    {
+        if (it->first >= 0)
+            close(it->first);
+    }
+    _connectedClients.clear();
+
+    if (_serverSocket >= 0)
+    {
+        close(_serverSocket);
+        _serverSocket = -1;
+    }
 }
 
 void Server::initializeServerSocket(void)
@@ -159,19 +181,28 @@ void Server::removeClientFromPolling(int clientSocket)
 void Server::startEventLoop(void)
 {
     std::signal(SIGPIPE, SIG_IGN);
+    std::signal(SIGINT, requestServerShutdown);
+    std::signal(SIGTERM, requestServerShutdown);
+    g_shutdownRequested = 0;
     initializeServerSocket();
 
-    while (1)
+    while (!g_shutdownRequested)
     {
         //Attente d'événements (temps infini = -1)
         int pollStatus = poll(_eventPolling, _activeDescriptors, -1);
         if (pollStatus == -1)
+        {
+            if (errno == EINTR && g_shutdownRequested)
+                break;
+            if (errno == EINTR)
+                continue;
             throw PollFailedError();
+        }
 
         //Parcours des descripteurs actifs (taille fixe au début de la boucle)
         unsigned int currentDescriptorCount = _activeDescriptors;
         unsigned int index = 0;
-        while (index < currentDescriptorCount)
+        while (index < currentDescriptorCount && !g_shutdownRequested)
         {
             try
             {
@@ -203,8 +234,12 @@ void Server::startEventLoop(void)
             }
             ++index;
         }
-    }    
-    close(_serverSocket);
+    }
+
+    std::cout << "Server shutting down; notifying connected clients." << std::endl;
+    for (ClientRegistry::iterator it = _connectedClients.begin();
+         it != _connectedClients.end(); ++it)
+        sendMessage("ERROR :Server shutting down", it->first);
 }
 
 void Server::acceptNewClient(void)
@@ -403,7 +438,7 @@ void Server::handleCommand(const std::string& rawData, int clientSocket)
 
         //Crée et exécute la requête
         Request clientRequest(commandLine, currentUser);
-        clientRequest.debug();
+        // clientRequest.debug(); 
         
         executeCommand(clientRequest);
 

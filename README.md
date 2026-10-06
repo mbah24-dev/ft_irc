@@ -77,7 +77,7 @@ PRIVMSG #42 :Hello!
 
 ## Commandes disponibles
 
-```text
+```
 PASS <mot_de_passe>
 NICK <pseudo>
 USER <utilisateur> <mode> <serveur> :<nom_complet>

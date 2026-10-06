@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 17:55:06 by mbah              #+#    #+#             */
-/*   Updated: 2026/10/01 10:54:35 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,15 +136,12 @@ std::string Request::_cleanLine(const std::string& input) const
 {
     std::string line = input;
     
-    //Supprime les retours à la ligne
     while (!line.empty() && (line[line.length() - 1] == '\r' || line[line.length() - 1] == '\n'))
         line.erase(line.length() - 1);
     
-    //Supprime les espaces en début de ligne
     while (!line.empty() && line[0] == ' ')
         line.erase(0, 1);
     
-    // Supprime les espaces en fin de ligne
     while (!line.empty() && line[line.length() - 1] == ' ')
         line.erase(line.length() - 1);
     
@@ -213,11 +210,9 @@ void Request::_parseWithTrailing(const std::string& rest)
 {
     std::string::size_type pos = rest.find(':');
     
-    //Extraire les paramètres avant le ':'
     std::string beforeTrailing = rest.substr(0, pos);
     _parseParams(beforeTrailing);
     
-    //Extraire le trailing (info)
     _extractTrailing(rest, pos);
 }
 
@@ -267,7 +262,6 @@ void Request::_extractTrailing(const std::string& rest, std::string::size_type p
 {
     this->_info = rest.substr(pos + 1);
     
-    //Supprime l'espace initial si présent
     if (!this->_info.empty() && this->_info[0] == ' ')
         this->_info.erase(0, 1);
 }

@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/08/24 14:29:55 by mbah              #+#    #+#             */
-/*   Updated: 2026/10/01 10:54:36 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -178,7 +178,6 @@ void Channel::addMember(User* user)
     if (!isMember(user))
     {
         _members.push_back(user);
-        // Le premier membre devient automatiquement opérateur
         if (_members.size() == 1)
             addOperator(user);
     }
@@ -216,21 +215,17 @@ void Channel::addOperator(User* user)
 
 int Channel::removeOperator(User* operatorUser)
 {
-    //RETIRE L'OPÉRATEUR
     _operators.remove(operatorUser);
 
     if (_operators.empty() && !_members.empty())
     {
-        //Le premier membre devient opérateur
         User* newOperator = *_members.begin();
         addOperator(newOperator);
 
-        //DIFFUSE LE CHANGEMENT
         std::string modeMessage = ":" + std::string(SERVER_NAME)
                                  + " MODE " + _name
                                  + " +o " + newOperator->getNickName();
 
-        //Envoie à tous les membres du canal via le serveur
         if (_server != NULL)
         {
             const std::list<User*>& members = getMembers(0);
@@ -274,10 +269,6 @@ void Channel::disableMode(char mode)
 {
     _modes &= ~modeToBitmask(mode);
 }
-//&= ~ (AND avec NOT)
-//Met le bit correspondant à 0 pour désactiver un mode sans toucher aux autres
-//|= (OR)
-//Met le bit correspondant à 1 pour activer un mode sans toucher aux autres
 void Channel::editMode(char mode, char sign)
 {
     short bitmask = modeToBitmask(mode);

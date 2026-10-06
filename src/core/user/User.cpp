@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:52 by mbah              #+#    #+#             */
-/*   Updated: 2026/10/01 10:56:04 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,14 +38,9 @@ User::User(const User & source)
       _fullname(source._fullname),
       _nickname(source._nickname)
 {
-    //Copie de la map des canaux
-    //On ne copie pas les pointeurs vers les canaux
-    //car les canaux sont gérés par le serveur
-    //On copie juste la structure de la map
     for (ChannelMap::const_iterator it = source._channelMap.begin();
          it != source._channelMap.end(); ++it)
     {
-        //On copie les pointeurs (pas les objets eux-mêmes)
         this->_channelMap[it->first] = it->second;
     }
 }
@@ -66,16 +61,12 @@ User::User(int socketFd, const std::string& hostMask)
 
 User::~User(void)
 {
-    //Les canaux ne sont pas supprimés ici
-    //Le serveur est responsable de la gestion des canaux
-    //L'utilisateur doit juste se retirer des canaux
 }
 
 User& User::operator=(const User& source)
 {
     if (this != &source)
     {
-        //Copie des attributs simples
         this->_receiveBuffer = source._receiveBuffer;
         this->_sendBuffer = source._sendBuffer;
         this->_socketFd = source._socketFd;
@@ -87,7 +78,6 @@ User& User::operator=(const User& source)
         this->_fullname = source._fullname;
         this->_nickname = source._nickname;
         
-        //Copie de la map des canaux
         this->_channelMap.clear();
         for (ChannelMap::const_iterator it = source._channelMap.begin();
              it != source._channelMap.end(); ++it)
@@ -127,7 +117,6 @@ std::string User::getPrefix(void) const
 {
     std::string prefix;
     
-    //Réservation de mémoire pour éviter les réallocations
     prefix.reserve(_nickname.length() + _name.length() + _hostmask.length() + 3);
     
     prefix = ":";

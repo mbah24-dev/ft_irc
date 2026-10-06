@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 12:23:21 by zcherif           #+#    #+#             */
-/*   Updated: 2026/10/06 12:23:52 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -285,8 +285,6 @@ void Server::handleOperCommand(const Request& req)
                     " OPER :Not enough parameters", clientSocket);
         return;
     }
-    // This server has no separate operator account configuration: use the
-    // registered username as the OPER name and the server password as secret.
     if (params[0] != client->getName() || params[1] != _connectionPassword)
     {
         sendMessage(response + " 464 " + nickname +

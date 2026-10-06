@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/06 12:19:05 by zcherif           #+#    #+#             */
-/*   Updated: 2026/10/06 12:21:06 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,17 +23,14 @@ void Server::handleCapCommand(const Request& req)
 
     const std::string& subCommand = params[0];
 
-    //CAP LS : Liste des capacités (aucune supportée)
     if (subCommand == "LS")
     {
         sendMessage(std::string(SERVER_NAME) + " CAP * LS :", clientSocket);
     }
-    //CAP END : Fin de négociation
     else if (subCommand == "END")
     {
         sendMessage(std::string(SERVER_NAME) + " CAP * ACK", clientSocket);
     }
-    //Autres sous-commandes : on accuse réception
     else
     {
         sendMessage(std::string(SERVER_NAME) + " CAP * ACK", clientSocket);
@@ -166,8 +163,6 @@ void Server::handleUserCommand(const Request& req)
     }
     client->setName(params[0]);
     client->setFullName(req.getInfo());
-    // client->setFullName(params[2]);
-
     checkRegistrationComplete(client);
 }
 

@@ -6,7 +6,7 @@
 /*   By: zcherif <zcherif@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/11 22:16:50 by mbah              #+#    #+#             */
-/*   Updated: 2026/10/06 13:50:46 by zcherif          ###   ########.fr       */
+/*   Updated: 2026/10/06 14:31:19 by zcherif          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,6 @@ Server::Server(char** arguments)
     time_t      currentTime = std::time(NULL);
     std::string creationDate = std::ctime(&currentTime);
     
-    // Suppression du '\n' en fin de chaîne
     if (!creationDate.empty() && creationDate[creationDate.size() - 1] == '\n')
         creationDate.erase(creationDate.size() - 1);
     
@@ -80,42 +79,32 @@ void Server::initializeServerSocket(void)
 {
     struct sockaddr_in  serverAddress;
 
-    //CRÉATION DU SOCKET 
     _serverSocket = socket(PF_INET, SOCK_STREAM, 0);
     if (_serverSocket == -1)
         throw CreateSocketError();
 
     std::cout << "Server listening on port: " << _listeningPort << std::endl;
 
-    //CONFIGURATION DE L'ADRESSE 
     std::memset(&serverAddress, 0, sizeof(serverAddress));
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(_listeningPort);
-    serverAddress.sin_addr.s_addr = INADDR_ANY;  //0.0.0.0
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
 
-    //OPTION REUSEADDR 
-	//Permet de relancer le serveur immédiatement sans attendre 
-	//que le port soit libéré (évite l'erreur "Address already in use")
     int reuseOption = 1;
     if (setsockopt(_serverSocket, SOL_SOCKET, SO_REUSEADDR,
                    reinterpret_cast<const char*>(&reuseOption), sizeof(int)) == -1)
         throw SetSocketOptionError();
 
-    //MODE NON-BLOQUANT imposer par 42
     if (fcntl(_serverSocket, F_SETFL, O_NONBLOCK) == -1)
         throw SetSocketOptionError();
 
-    //BIND 
-	//Attache le socket à un port et une IP spécifiques
     if (bind(_serverSocket, reinterpret_cast<struct sockaddr*>(&serverAddress),
              sizeof(serverAddress)) == -1)
         throw BindSocketError();
 
-    //LISTEN 
     if (listen(_serverSocket, SOMAXCONN) == -1)
         throw ListenSocketError();
 
-    //INITIALISATION DE POLL
     std::memset(_eventPolling, 0, sizeof(_eventPolling));
     _eventPolling[0].fd = _serverSocket;
     _eventPolling[0].events = POLLIN;
@@ -139,7 +128,6 @@ void Server::removeClientFromChannels(User* user, const std::string& message)
 {
     std::list<std::string> emptyChannels;
 
-    //RETIRE L'UTILISATEUR DE TOUS LES CANAUX
     ChannelRegistry::iterator channelIt = _activeChannels.begin();
     while (channelIt != _activeChannels.end())
     {
@@ -147,7 +135,6 @@ void Server::removeClientFromChannels(User* user, const std::string& message)
         
         if (currentChannel.isMember(user))
         {
-            //Retire l'utilisateur du canal
             if (currentChannel.removeMember(user))
                 emptyChannels.push_back(currentChannel.getName());
 
@@ -157,7 +144,6 @@ void Server::removeClientFromChannels(User* user, const std::string& message)
         ++channelIt;
     }
 
-    //SUPPRIMER LES CANAUX VIDES
     for (std::list<std::string>::const_iterator emptyIt = emptyChannels.begin();
          emptyIt != emptyChannels.end(); ++emptyIt)
     {
@@ -188,7 +174,6 @@ void Server::startEventLoop(void)
 
     while (!g_shutdownRequested)
     {
-        //Attente d'événements (temps infini = -1)
         int pollStatus = poll(_eventPolling, _activeDescriptors, -1);
         if (pollStatus == -1)
         {
@@ -199,7 +184,6 @@ void Server::startEventLoop(void)
             throw PollFailedError();
         }
 
-        //Parcours des descripteurs actifs (taille fixe au début de la boucle)
         unsigned int currentDescriptorCount = _activeDescriptors;
         unsigned int index = 0;
         while (index < currentDescriptorCount && !g_shutdownRequested)
@@ -244,7 +228,6 @@ void Server::startEventLoop(void)
 
 void Server::acceptNewClient(void)
 {
-    //ACCEPTATION DE LA CONNEXION
     struct sockaddr_in  clientAddress;
     socklen_t           addressLength = sizeof(clientAddress);
     
@@ -261,14 +244,11 @@ void Server::acceptNewClient(void)
         throw SetSocketOptionError();
     }
 
-    //RÉCUPÉRATION DE L'ADRESSE IP
     char ipAddress[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &clientAddress.sin_addr, ipAddress, INET_ADDRSTRLEN);
 
-    //AJOUT À LA MAP DES CLIENTS
     _connectedClients.insert(std::make_pair(clientSocket, User(clientSocket, ipAddress)));
 
-    //AJOUT AU TABLEAU POLL() ========================
     addToPolling(clientSocket);
 
     std::cout << "New client connected on fd " << clientSocket 
@@ -282,7 +262,7 @@ void Server::addToPolling(int clientSocket)
 
     _eventPolling[_activeDescriptors].fd = clientSocket;
     _eventPolling[_activeDescriptors].events = POLLIN;
-    _eventPolling[_activeDescriptors].revents = 0;  //Réinitialise
+    _eventPolling[_activeDescriptors].revents = 0;
 
     ++_activeDescriptors;
 }
@@ -292,10 +272,8 @@ void Server::removeFromPolling(int index)
     if (index < 0 || static_cast<unsigned int>(index) >= _activeDescriptors)
         return;
 
-    //FERME LE SOCKET
     close(_eventPolling[index].fd);
 
-    //REMPLACE PAR LE DERNIER ÉLÉMENT 
     int lastIndex = _activeDescriptors - 1;
     
     if (index != lastIndex)
@@ -305,7 +283,6 @@ void Server::removeFromPolling(int index)
         _eventPolling[index].revents = _eventPolling[lastIndex].revents;
     }
 
-    //NETTOIE LE DERNIER ÉLÉMENT
     _eventPolling[lastIndex].fd = -1;
     _eventPolling[lastIndex].events = 0;
     _eventPolling[lastIndex].revents = 0;
@@ -376,15 +353,12 @@ bool Server::executeAdminCommand(const Request& req)
 
 void Server::processClientRequest(int pollIndex)
 {
-    //RÉCUPÉRATION DU SOCKET
     int clientSocket = _eventPolling[pollIndex].fd;
 
-    //LECTURE DES DONNÉES
     char receiveBuffer[BUFFER_SIZE];
     
     ssize_t bytesReceived = recv(clientSocket, receiveBuffer, BUFFER_SIZE, 0);
 
-    //GESTION DE LA DÉCONNEXION
     if (bytesReceived <= 0)
     {
         if (bytesReceived == 0)
@@ -394,7 +368,6 @@ void Server::processClientRequest(int pollIndex)
         else
             throw ReceiveMessageFailed();
         
-        //Retire le client
         ClientRegistry::iterator clientIt = _connectedClients.find(clientSocket);
         if (clientIt != _connectedClients.end())
             disconnectClient(&clientIt->second, "disconnected");
@@ -402,29 +375,24 @@ void Server::processClientRequest(int pollIndex)
         return;
     }
 
-    //TRAITEMENT DE LA COMMANDE
     handleCommand(std::string(receiveBuffer, static_cast<std::size_t>(bytesReceived)),
                   clientSocket);
 }
 
 void Server::handleCommand(const std::string& rawData, int clientSocket)
 {
-    //RÉCUPÉRATION DE L'UTILISATEUR
     ClientRegistry::iterator clientIt = _connectedClients.find(clientSocket);
     if (clientIt == _connectedClients.end())
-        return;  //Client introuvable
+        return;
     
-    User* currentUser = &clientIt->second; //(key = first, value = second)
+    User* currentUser = &clientIt->second;
 
-    //AJOUT DES DONNÉES AU BUFFER
     currentUser->appendToBuffer(rawData);
 
-    //EXTRACTION DES COMMANDES 
     size_t separatorPosition = currentUser->_receiveBuffer.find('\n');
     
     while (separatorPosition != std::string::npos)
     {
-        //Extraire une commande complète
         std::string commandLine = currentUser->_receiveBuffer.substr(0, separatorPosition);
         if (!commandLine.empty() && commandLine[commandLine.length() - 1] == '\r')
             commandLine.erase(commandLine.length() - 1);
@@ -436,17 +404,12 @@ void Server::handleCommand(const std::string& rawData, int clientSocket)
             continue;
         }
 
-        //Crée et exécute la requête
         Request clientRequest(commandLine, currentUser);
-        // clientRequest.debug(); 
-        
         executeCommand(clientRequest);
 
-        //Vérifie si le client a été supprimé (ex: commande QUIT)
         if (_connectedClients.find(clientSocket) == _connectedClients.end())
             break;
 
-        //Cherche la prochaine commande, que le client utilise LF ou CRLF
         separatorPosition = currentUser->_receiveBuffer.find('\n');
     }
 }
